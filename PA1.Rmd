@@ -156,8 +156,21 @@ if we now check again for NAs, we will see that there are 0 left:
 
 ```
 
-### Changes in Mean and Median Values after imputing 
+### Changes in properties after imputing the missing values 
 
+after imputing the missing values in the data set, it will be good to check in which way the properties of the data changed, if at all. 
 
+For this, we once more create a histogram of the total number of steps per day, this time using the cleaned data set. 
+We use the following code to create the graph: 
+
+```{r histogram of total steps per day, after imputing missing values}
+
+   library(dplyr)
+  total_values <- data %>% group_by(date) %>%  summarize_at("steps", sum)
+  hist(total_values$steps, col="cyan", xlab="Total Number of Steps", main = "Histogram of the Total Number of Steps per day")
+
+```
+
+Additionally, we also calculate the mean and median 
 
 ## Are there differences in activity patterns between weekdays and weekends?
