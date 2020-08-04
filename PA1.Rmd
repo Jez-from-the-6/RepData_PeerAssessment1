@@ -42,6 +42,7 @@ The first step is to calculate the *Total Number of Steps per day* and visualize
 ```{r Calculating and visualizing the Total NUmber of steps per Day}
   library(dplyr)
   total_values <- data %>% group_by(date) %>%  summarize_at("steps", sum)
+  
   hist(total_values$steps, col="cyan", xlab="Total Number of Steps", main = "Histogram of the Total Number of Steps per day")
 ```
 
@@ -99,7 +100,7 @@ The Data Frame can now be used to create the Time Series Plot. The plot can be c
   library(hms)
   
   p <- ggplot(interval_values, aes(x= hms(minutes = which(interval == interval) * 5), y=steps)
-              ) + geom_line() + xlab("Minutes of the day")
+              ) + geom_line() + xlab("Daytime")
                                    
   p
   
@@ -171,6 +172,83 @@ We use the following code to create the graph:
 
 ```
 
-Additionally, we also calculate the mean and median 
+Additionally, we also calculate the mean and median values after the imputing:
+
+```{r mean/median after imputing the missing values}
+
+  total_steps <- data %>% group_by(date) %>%  summarize_at("steps", sum)
+
+  mean_steps <- mean(total_steps$steps)
+  median_steps <- median(total_steps$steps)
+
+```
+
+The new values are:
+
+- median `r as.character(round(median_steps, 2))`, rounded to 2 digits
+- mean `r as.character(round(mean_steps, 2))`, rounded to 2 digits
+
+Both the mean and the median value are now exactly equal to the mean value before imputing the missing values. The distribution of the frequency of total steps also equals roughly the bell shape we had before imputing, meaning that the imputing didnt introduce any drastic or unexpected changes to the dataset that would require further, deeper investigation.
 
 ## Are there differences in activity patterns between weekdays and weekends?
+
+Lastly, we want to answer the question whether there is a difference in activity patterns between weekdays and weekends. 
+
+### Grouping Observations into Weekday/Weekend
+
+In order to do this, we first calculate the day of the week for each entry in the data set by using the weekdays() function. Afterwards, the data set will get an extra column indicating if the observation was on a weekday or the weekend. To achieve this we use the following r code chunk:
+
+```{r calculating and subsetting the data by day of the week}
+
+  #making sure the system locale is set to English format for Dates
+  locale <- Sys.setlocale("LC_TIME", "C")  
+   
+  # string vectors that express which days are weekdays and which weekend days
+  weekday_as_string_set <- c("Monday", "Tuesday", "Wednesday", "Thursday", "Friday")
+  weekend_as_string_set <- c("Saturday", "Sunday")
+  
+  # create a new column that contains the weekday of the observation
+  data$day <- factor(weekdays(data$date))
+  
+  # combining the current levels in the created factor column into a weekday and a weekend column
+  levels(data$day) <- list("weekday" = weekday_as_string_set, "weekend" = weekend_as_string_set)
+  
+  print(table(data$day))
+
+```
+
+Printing the created Factor column tells us that we have `r table(data$day)[["weekday"]]` observations from weekdays and `r table(data$day)[["weekend"]]` observations from weekends.
+
+### Activity Patterns Visualized 
+
+Now that it is known which observations belong to weekdays and which to weekends, it is possible to calculate and visualize the respective activity patterns. The data will be visualized using a plot panel of time series plots, the first of which shows the weekday activity pattern while the second displays the activity pattern for weekends:
+
+```{r, fig.width=10, "Activity Patterns of Weekday/Weekend in Comparison"}
+
+  # attach ggplot2 package to draw the panels 
+  library(ggplot2)
+  library(gridExtra)
+
+  # the data gets split into two subsets, one for weekdays and one for weekends
+  split_data <- split(data, data$day)
+  
+  # the split data gets used to calculate the respective average values for each interval
+  average_values_weekday <- split_data$weekday %>% group_by(day, interval) %>% summarize_at("steps", mean, na.rm=TRUE)
+  average_values_weekend <- split_data$weekend %>% group_by(day, interval) %>% summarize_at("steps", mean, na.rm=TRUE)
+  
+  # create a time series plot for each
+  weekday_plot <- ggplot(average_values_weekday, aes(x= hms(minutes = which(interval == interval) * 5), y=steps)
+              ) + geom_line() + xlab("Daytime")
+  
+  weekend_plot <- ggplot(average_values_weekend, aes(x= hms(minutes = which(interval == interval) * 5), y=steps)
+              ) + geom_line() + xlab("Daytime") + theme(axis.title.y=element_blank(),
+        axis.text.y=element_blank(),
+        axis.ticks.y=element_blank())
+  
+  grid.arrange(weekday_plot, weekend_plot, nrow= 1, widths=c(5,5))
+                                   
+
+```
+
+
+The comparison of the graphs show, that while the general trend/pattern of activity is similar for weekend and weekday, the activity between 10:00 and about 18:00 seems to be almost linearly scaled up by a factor C which in general seems to be about 2. Meaning, that when on weekdays the average number of steps at the intervals around 12:00 is about 90 steps, this is amplified by a factor of about 2 on weekends, the graph shows a value of about 180-190 steps. Outside of this 10:00 - 18:00 interval the step averages are roughly equal.
